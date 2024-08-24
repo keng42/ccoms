@@ -1,0 +1,9 @@
+.DS_Store
+build
+dist
+logs
+devdata/filedb
+devdata/etcd
+devdata/nats
+.build-counter
+*.local

@@ -1,0 +1,200 @@
+services:
+  mysql:
+    image: mysql:8
+    # cpus: '4.0'
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: ccoms_bm
+      MYSQL_USER: bmuser
+      MYSQL_PASSWORD: bmpwdtest
+    command: >
+      --innodb-flush-log-at-trx-commit=2
+      --innodb-flush-method=O_DIRECT
+      --innodb-log-file-size=4G
+      --innodb-redo-log-capacity=8G
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # ports:
+    #   - "3306:3306"
+    volumes:
+      # - type: tmpfs
+      #   target: /var/lib/mysql
+      - /var/lib/docker/mydata/mysql:/var/lib/mysql  # Mount high IOPS storage
+    networks:
+      - network
+
+  redis:
+    image: redis:latest
+    # ports:
+    #   - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - network
+
+  nats_usdt:
+    image: nats:latest
+    # cpus: '4.0'
+    # ports:
+    #   - "4222:4222"
+    #   - "8222:8222"
+    healthcheck:
+      test: ["CMD", "nats", "ping", "-s", "nats://localhost:4222"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command: -js -sd /nats-data
+    volumes:
+      - /var/lib/docker/mydata/nats-usdt:/nats-data  # Mount high IOPS storage
+    networks:
+      - network
+
+  nats_btc:
+    image: nats:latest
+    # cpus: '4.0'
+    # ports:
+    #   - "4222:4222"
+    #   - "8222:8222"
+    healthcheck:
+      test: ["CMD", "nats", "ping", "-s", "nats://localhost:4222"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command: -js -sd /nats-data
+    volumes:
+      - /var/lib/docker/mydata/nats-btc:/nats-data  # Mount high IOPS storage
+    networks:
+      - network
+
+  etcd:
+    image: bitnami/etcd:latest
+    environment:
+      ETCD_DATA_DIR: /etcd-data
+      ALLOW_NONE_AUTHENTICATION: "yes"
+    # ports:
+    #   - "2379:2379"
+    #   - "2380:2380"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - network
+
+  bm_prepare:
+    image: alpine:latest
+    environment:
+      XLOG_LVL: INFONFO
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats_btc:
+        condition: service_healthy
+      nats_usdt:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    volumes:
+      - ./app:/app
+      - ./ccoms-data:/ccoms-data
+    command: sh -c "sleep 10 && /app/ccoms --app=bm --config=/app/config/config.yaml"  # 添加等待时间
+    healthcheck:
+      test: ["CMD", "cat", "/tmp/ccoms_bm_prepared"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - network
+
+  bank_btc:
+    image: alpine:latest
+    # cpus: '4.0'
+    environment:
+      XLOG_LVL: INFO
+    depends_on:
+      bm_prepare:
+        condition: service_healthy
+    volumes:
+      - ./app:/app
+      - ./ccoms-data:/ccoms-data
+    command: /app/ccoms --app=bank --coin=BTC --config=/app/config/config.yaml
+    networks:
+      - network
+
+  bank_usdt:
+    image: alpine:latest
+    # cpus: '4.0'
+    environment:
+      XLOG_LVL: INFO
+    depends_on:
+      bm_prepare:
+        condition: service_healthy
+    volumes:
+      - ./app:/app
+      - ./ccoms-data:/ccoms-data
+    command: /app/ccoms --app=bank --coin=USDT --config=/app/config/config.yaml
+    networks:
+      - network
+
+  ome_btc_usdt:
+    image: alpine:latest
+    # cpus: '4.0'
+    environment:
+      XLOG_LVL: INFO
+    depends_on:
+      bm_prepare:
+        condition: service_healthy
+    volumes:
+      - ./app:/app
+      - ./ccoms-data:/ccoms-data
+    command: /app/ccoms --app=ome --symbol=BTC_USDT --config=/app/config/config.yaml
+    networks:
+      - network
+
+  ingress:
+    image: alpine:latest
+    # cpus: '4.0'
+    environment:
+      XLOG_LVL: INFO
+    depends_on:
+      bm_prepare:
+        condition: service_healthy
+    volumes:
+      - ./app:/app
+      - ./ccoms-data:/ccoms-data
+    command: /app/ccoms --app=ingress --config=/app/config/config.yaml
+    networks:
+      - network
+
+  filedb_monitor:
+    image: alpine:latest
+    # cpus: '4.0'
+    environment:
+      XLOG_LVL: INFO
+    depends_on:
+      bm_prepare:
+        condition: service_healthy
+    volumes:
+      - ./app:/app
+      - ./ccoms-data:/ccoms-data
+    command: /app/ccoms --app=fm --config=/app/config/config.yaml
+    networks:
+      - network
+
+networks:
+  network:

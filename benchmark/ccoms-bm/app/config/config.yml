@@ -1,0 +1,35 @@
+is_debug: true
+
+data_dir: "/ccoms-data"
+aes_key: "08045a86ec6dc810e61313b2655bc28069c9f414a273d813a6176ac8e170da8b"
+
+mysql:
+  main:
+    enabled: true
+    host: "mysql"
+    port: 3306
+    user: "bmuser"
+    pass: "bmpwdtest"
+    db: "ccoms_bm"
+    max_open_conns: 8
+
+redis:
+  main:
+    enabled: true
+    addr: "redis:6379"
+    db: 2
+    pass: ""
+    timeout: 3000
+
+etcd:
+  main:
+    enabled: true
+    url: "etcd:2379"
+
+env:
+  xlog_mode: ""
+  xlog_color: true
+
+sentry:
+  enabled: false
+  dsn: ""

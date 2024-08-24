@@ -1,0 +1,30 @@
+is_debug: true
+
+data_dir: "/usr/local/ccoms/devdata"
+aes_key: "08045a86ec6dc810e61313b2655bc28069c9f414a273d813a6176ac8e170da8b"
+
+mysql:
+  main:
+    enabled: true
+    host: "127.0.0.1"
+    port: 3306
+    user: "api"
+    pass: "9e3830ee71e361fcabb3d274eec8ba8523cb993c"
+    db: "ccoms"
+    max_open_conns: 8
+
+redis:
+  main:
+    enabled: true
+    addr: "127.0.0.1:6379"
+    db: 2
+    pass: ""
+    timeout: 3000
+
+env:
+  xlog_mode: ""
+  xlog_color: true
+
+sentry:
+  enabled: false
+  dsn: ""
